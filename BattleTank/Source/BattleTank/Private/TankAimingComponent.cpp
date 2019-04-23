@@ -3,6 +3,8 @@
 
 #include "TankAimingComponent.h"
 #include "TankBarrel.h"
+#include "GameFramework/Actor.h"
+#include "Engine/Classes/Kismet/GameplayStatics.h"
 
 
 // Sets default values for this component's properties
@@ -45,7 +47,7 @@ void UTankAimingComponent::AimAt(FVector HitLocation, float LaunchSpeed)
 	FVector StartLocation = Barrel->GetSocketLocation(FName("Muzzle"));
 	FCollisionResponseParams CollisionResponseParams;
 
-	if(UGameplayStatics::SuggestProjectileVelocity(
+	bool HaveAimSolution = UGameplayStatics::SuggestProjectileVelocity(
 		this,
 		OutLaunchVelocity,
 		StartLocation,
@@ -55,10 +57,16 @@ void UTankAimingComponent::AimAt(FVector HitLocation, float LaunchSpeed)
 		0.f, //float CollisionRadius,
 		0.f, //float OverrideGravityZ,
 		ESuggestProjVelocityTraceOption::DoNotTrace
-		))
-	{
+	);
+	if (HaveAimSolution){
+		auto Time = GetWorld()->GetTimeSeconds();
+		UE_LOG(LogTemp, Warning, TEXT("%f :Aim solution. HL %s"), Time, *HitLocation.ToString())
+
 		auto AimDirection = OutLaunchVelocity.GetSafeNormal();
 		MoveBarrelTowards(AimDirection);
+	} else {
+		auto Time = GetWorld()->GetTimeSeconds();
+		UE_LOG(LogTemp, Warning, TEXT("%f :NO Aim solution"), Time)
 	}
 }
 
@@ -68,6 +76,6 @@ void UTankAimingComponent::MoveBarrelTowards(FVector AimDirection)
 	auto AimRotator = AimDirection.Rotation();
 	auto DeltaRotator = AimRotator - BarrelRotator;
 
-	Barrel->Elevate(5);
+	Barrel->Elevate(DeltaRotator.Pitch);
 //work out difference between current and desired with 
 }
